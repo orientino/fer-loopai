@@ -56,6 +56,7 @@ SmoothLabel representation + Finetune VGGFace
 ResNet + Custom
     - https://www.kaggle.com/haneenabdelmaguid/facial-expression-detection-2
 
+
 Tools
 ===================
 Image augmentation
@@ -66,7 +67,6 @@ FastAI CV models
     - Examples: https://docs.fast.ai/quick_start.html
     - Book: https://github.com/fastai/fastbook
     	- ResNet: https://github.com/fastai/fastbook/blob/master/14_resnet.ipynb
-
 
 Simple Examples Full
 ===================

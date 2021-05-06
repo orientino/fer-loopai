@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as img
 from sklearn.model_selection import train_test_split
-from load_data import load_data
+from utils.data import load_data, FaceDataset
 plt.style.use('ggplot')
 
 X, y = load_data('./data/challengeA_train.csv', './data/images_train/')
@@ -24,7 +24,6 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-import torchvision
 from torchvision import *
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
@@ -32,10 +31,6 @@ from PIL import Image
 import timm
 from timm.data import resolve_data_config
 from timm.data.transforms_factory import create_transform
-
-vit = timm.create_model('vit_base_patch16_224', pretrained=True, )
-vit.head = nn.Linear(768,7)
-# vit.eval()
 
 # %% Transformation using timm (?)
 # config = resolve_data_config({}, model=vit)
@@ -50,31 +45,11 @@ vit.head = nn.Linear(768,7)
 # plt.imshow(tensor.squeeze())
 # tensor.shape
 
-# from pprint import pprint
-# model_names = timm.list_models('*vit*')
-# pprint(model_names)
-
 # %%
-class FaceDataset(Dataset):
-    def __init__(self, data, labels, transform=None):
-        super().__init__()
-        self.data = data
-        self.labels = labels
-        self.transform = transform
-        
-    def __len__(self):
-        return len(self.data)
-    
-    def __getitem__(self,index):
-        image, label = self.data[index], self.labels[index] 
-        image = Image.fromarray(image).convert('RGB')
-        if self.transform is not None:
-            image = self.transform(image)
-        return image, label
-
 transform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Resize(224, interpolation=Image.NEAREST)
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    # transforms.Resize(224, interpolation=Image.NEAREST)
 ])
 
 batch_size = 32
@@ -88,81 +63,101 @@ test_loader = DataLoader(test_data, batch_size, shuffle=False, num_workers=0)
 batch_X_train, batch_y_train = next(iter(train_loader))
 batch_X_train.shape
 
+batch_X_train[0]
 # for i in range(5):
 #     display(transforms.ToPILImage()(batch_X_train[i]))
 
 # %%
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-device
 
 # %%
-vit = timm.create_model('vit_base_patch16_224', pretrained=True)
-vit.head = nn.Linear(768,7)
+vit = timm.create_model('vit_base_patch16_224', pretrained=True, img_size=48, num_classes=7)
 vit = vit.to(device)
+# print(vit.eval())
+
+# freeze all parameters but last one
+for param in vit.parameters():
+    param.requires_grad = False
+for param in vit.head.parameters():
+    param.requires_grad = True
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(vit.parameters(), lr=0.0001, momentum=0.9)
+optimizer = optim.SGD(vit.parameters(), lr=3e-4, momentum=0.9)
 
 # %%
-n_epochs = 5
-valid_loss_min = np.Inf
-valid_loss, valid_acc = [], []
-train_loss, train_acc = [], []
+vit(batch_X_train)
 
-for epoch in range(1, n_epochs+1):
-    loss_epoch = 0.0
-    correct, total = 0, 0
-    print(f'Epoch {epoch}')
+# %%
+from utils.model import train
+epochs = 10
+train_loss, train_acc, valid_loss, valid_acc = train(
+                                                vit, 
+                                                train_loader, 
+                                                valid_loader, 
+                                                criterion, 
+                                                optimizer, 
+                                                epochs, 
+                                                device
+                                            )                                            
 
-    for batch_idx, (input, label) in enumerate(train_loader):
-        input, label = input.to(device), label.to(device)
-        optimizer.zero_grad()
+# %%
+# n_epochs = 1
+# valid_loss_min = np.Inf
+# valid_loss, valid_acc = [], []
+# train_loss, train_acc = [], []
+
+# for epoch in range(1, n_epochs+1):
+#     loss_epoch = 0.0
+#     correct, total = 0, 0
+#     print(f'Epoch {epoch}')
+
+#     for batch_idx, (input, label) in enumerate(train_loader):
+#         input, label = input.to(device), label.to(device)
+#         optimizer.zero_grad()
         
-        outputs = vit(input)
-        _, label = torch.max(label, dim=1)
+#         outputs = vit(input)
+#         _, label = torch.max(label, dim=1)
 
-        loss = criterion(outputs, label)
-        loss.backward()
-        optimizer.step()
+#         loss = criterion(outputs, label)
+#         loss.backward()
+#         optimizer.step()
 
-        loss_epoch += loss.item()
-        total += label.size(0)
-        _, pred = torch.max(outputs, dim=1)
-        correct += torch.sum(pred==label).item()
+#         loss_epoch += loss.item()
+#         total += label.size(0)
+#         _, pred = torch.max(outputs, dim=1)
+#         correct += torch.sum(pred==label).item()
         
-        if (batch_idx) % 50 == 0:
-            print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
-                   .format(epoch, n_epochs, batch_idx, len(train_loader), loss.item()))
+#         if (batch_idx) % 50 == 0:
+#             print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
+#                    .format(epoch, n_epochs, batch_idx, len(train_loader), loss.item()))
 
-    train_acc.append(correct / total)
-    train_loss.append(loss_epoch / len(train_loader))
-    print(f'\ntrain-loss: {np.mean(train_loss):.4f}, train-acc: {(correct / total):.4f}')
+#     train_acc.append(correct / total)
+#     train_loss.append(loss_epoch / len(train_loader))
+#     print(f'\ntrain-loss: {np.mean(train_loss):.4f}, train-acc: {(correct / total):.4f}')
     
-    # validation phase
-    loss_epoch = 0.0
-    correct, total = 0, 0
+#     # validation phase
+#     loss_epoch = 0.0
+#     correct, total = 0, 0
 
-    with torch.no_grad():
-        # net.eval()
-        for input, label in (valid_loader):
-            input, label = input.to(device), label.to(device)
-            outputs = vit(input)
-            _, label = torch.max(label, dim=1)
+#     with torch.no_grad():
+#         for input, label in (valid_loader):
+#             input, label = input.to(device), label.to(device)
+#             outputs = vit(input)
+#             _, label = torch.max(label, dim=1)
 
-            loss = criterion(outputs, label)
+#             loss = criterion(outputs, label)
 
-            loss_epoch += loss.item()
-            total += label.size(0)
-            _,pred = torch.max(outputs, dim=1)
-            correct += torch.sum(pred==label).item()
+#             loss_epoch += loss.item()
+#             total += label.size(0)
+#             _,pred = torch.max(outputs, dim=1)
+#             correct += torch.sum(pred==label).item()
             
-        valid_acc.append(correct / total)
-        valid_loss.append(loss_epoch / len(valid_loader))
-        network_learned = loss_epoch < validid_loss_min
-        print(f'valididation loss: {np.mean(valid_loss):.4f}, valididation acc: {(correct / total):.4f}')
+#         valid_acc.append(correct / total)
+#         valid_loss.append(loss_epoch / len(valid_loader))
+#         network_learned = loss_epoch < valid_loss_min
+#         print(f'valididation loss: {np.mean(valid_loss):.4f}, valididation acc: {(correct / total):.4f}')
         
-        if network_learned:
-            validid_loss_min = loss_epoch
-            torch.save(vit.state_dict(), f'./vit_base_patch16_224_ep{epoch}_lr1e-3.pt')
-            print('Improvement-Detected, save-model')
-    # net.train()
+#         if network_learned:
+#             valid_loss_min = loss_epoch
+#             torch.save(vit.state_dict(), f'./vit_base_patch16_224_ep{epoch}_lr1e-3.pt')
+#             print('Improvement-Detected, save-model')

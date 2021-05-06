@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as img
 from sklearn.model_selection import train_test_split
-from load_data import load_data
+from utils.data import load_data
 
 from keras import models
 from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPool2D
@@ -34,7 +34,6 @@ model.summary()
 # %%
 history = model.fit(X_train, y_train,
                     validation_data=(X_test, y_test),
-                    # class_weight = class_weight,
                     epochs=3,
                     batch_size=32)
 
