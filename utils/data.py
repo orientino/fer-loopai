@@ -17,7 +17,7 @@ def load_data(path_file, path_data):
         [n,48,48,3], [n, 7]
     """
 
-    df = pd.read_csv(path_file, sep=',')
+    df = pd.read_csv(path_file, sep=',')[:32]
     image_files = df['image_id']
     image_labels = df['emotion']
     X, y = [], []

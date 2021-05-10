@@ -11,7 +11,8 @@ from torchvision import *
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from sklearn.model_selection import train_test_split
-from utils.data import load_data, FaceDataset
+import torchvision
+from utils.data import *
 
 plt.style.use('ggplot')
 
@@ -19,7 +20,8 @@ plt.style.use('ggplot')
 path_train = './data/images_train'
 path_test = './data/images_test'
 
-df = pd.read_csv('./data/challengeA_train.csv', index_col=0)
+# TODO stratify the splitting
+df = pd.read_csv('./data/challengeA_train.csv', index_col=0)[:32]
 df_train, df_test = train_test_split(df, test_size=0.2)
 df_train, df_valid = train_test_split(df_train, test_size=0.25)
 
@@ -28,9 +30,11 @@ print(f'Valid: {len(df_valid)}')
 print(f'Test: {len(df_test)}')
 
 # %%
+mean, std = [0.5059], [0.2547]
 transform = transforms.Compose([
+    # transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    transforms.Normalize([0.5059], [0.2547])
+    transforms.Normalize(mean, std),
     # transforms.Resize(224, interpolation=Image.NEAREST)
 ])
 
@@ -42,25 +46,31 @@ train_loader = DataLoader(train_data, batch_size, shuffle=True, num_workers=0)
 valid_loader = DataLoader(valid_data, batch_size, shuffle=False, num_workers=0)
 test_loader = DataLoader(test_data, batch_size, shuffle=False, num_workers=0)
 
+def imshow(img):
+    img = img * std[0] + mean[0]     # unnormalize
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.show()
+
 batch_X_train, batch_y_train = next(iter(train_loader))
-batch_y_train.shape
+imshow(utils.make_grid(batch_X_train))
+# print(' '.join('%5s' % batch_y_train[j] for j in range(batch_size)))
 
-# %%
-psum = torch.tensor([0., 0., 0.])
-psum_sq = torch.tensor([0., 0., 0.])
+# # %%
+# psum = torch.tensor([0., 0., 0.])
+# psum_sq = torch.tensor([0., 0., 0.])
 
-for image, _ in train_loader:
-    psum += image.sum(axis=[0,2,3])
-    psum_sq += (image**2).sum(axis=[0,2,3])
+# for image, _ in train_loader:
+#     psum += image.sum(axis=[0,2,3])
+#     psum_sq += (image**2).sum(axis=[0,2,3])
 
-# mean and std
-total_pixel = len(df_train)*48*48
-total_mean = psum / total_pixel
-total_std = torch.sqrt((psum_sq / total_pixel) - (total_mean ** 2))
+# # mean and std
+# total_pixel = len(df_train)*48*48
+# total_mean = psum / total_pixel
+# total_std = torch.sqrt((psum_sq / total_pixel) - (total_mean ** 2))
 
-# output
-print('mean: ' + str(total_mean))
-print('std:  ' + str(total_std))
+# print('mean: ' + str(total_mean))
+# print('std:  ' + str(total_std))
 
 # %%
 class DCNN(nn.Module): 
@@ -68,28 +78,26 @@ class DCNN(nn.Module):
         super(DCNN, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, padding=1)
         self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1)
         self.fc1 = nn.Linear(64*12*12, 64)
         self.fc2 = nn.Linear(64, 7)
 
     def forward(self, x):
         x = F.max_pool2d(F.relu(self.conv1(x)), 2)
         x = F.max_pool2d(F.relu(self.conv2(x)), 2)
-        x = F.relu(self.conv3(x))
         x = torch.flatten(x, 1)
         x = F.relu(self.fc1(x))
-        x = F.softmax(self.fc2(x), dim=1)
+        x = self.fc2(x)
         return x
 
 net = DCNN()
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=3e-4, momentum=0.9)
+optimizer = optim.SGD(net.parameters(), lr=3e-3, momentum=0.9)
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 net(batch_X_train[0].unsqueeze(0))
 
 # %%
 from utils.model import train
-epochs = 10
+epochs = 100
 train_loss, train_acc, valid_loss, valid_acc = train(
                                                 net, 
                                                 train_loader, 

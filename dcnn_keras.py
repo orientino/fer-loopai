@@ -14,12 +14,13 @@ plt.style.use('ggplot')
 
 # %%
 X, y = load_data('./data/challengeA_train.csv', './data/images_train/')
+X = np.expand_dims(X, 3)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 X.shape
 
 # %%
 model = models.Sequential()
-model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(48, 48, 3)))
+model.add(Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(48, 48, 1)))
 model.add(MaxPool2D((2, 2)))
 model.add(Conv2D(64, (3, 3), padding='same', activation='relu'))
 model.add(MaxPool2D((2, 2)))
@@ -34,7 +35,7 @@ model.summary()
 # %%
 history = model.fit(X_train, y_train,
                     validation_data=(X_test, y_test),
-                    epochs=3,
+                    epochs=50,
                     batch_size=32)
 
 loss_train = history.history['loss']

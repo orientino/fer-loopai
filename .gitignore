@@ -1,4 +1,6 @@
 __pycache__/*
+utils/__pycache__/*
 .vscode/*
 data/*
 description.pdf
+todo
