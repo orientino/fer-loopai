@@ -7,33 +7,6 @@ from torch.utils.data import Dataset
 from PIL import Image
 
 
-def load_data(path_file, path_data):
-    """
-    Args
-        path_file (str)
-        path_data (str)
-
-    Returns
-        [n,48,48,3], [n, 7]
-    """
-
-    df = pd.read_csv(path_file, sep=',')[:32]
-    image_files = df['image_id']
-    image_labels = df['emotion']
-    X, y = [], []
-
-    for file, label in zip(image_files, image_labels):
-        tmp_x = img.imread(path_data + file + '.jpg')
-        tmp_y = np.array([1 if label == i else 0 for i in range(7)])
-        X.append(tmp_x)
-        y.append(tmp_y)
-
-    X = np.array(X).astype(float)
-    y = np.array(y).astype(float)
-    
-    return X, y
-
-
 class FaceDataset(Dataset):
     def __init__(self, data, directory, transform=None):
         super().__init__()
@@ -53,6 +26,43 @@ class FaceDataset(Dataset):
             image = self.transform(image)
 
         return image, label
+
+
+def get_class_weights(df_label):
+    # gives more weight to minority classes
+    # the weight for a class is computed as:
+    #     w_j = n_samples / (n_classes * n_samples_j)
+    n_classes = len(df_label.unique())
+    class_weights = [len(df_label)/(n_classes*len(df_label[df_label==i])) 
+                    for i in range(n_classes)]
+    return class_weights
+
+
+# def load_data(path_file, path_data):
+#     """
+#     Args
+#         path_file (str)
+#         path_data (str)
+
+#     Returns
+#         [n,48,48,3], [n, 7]
+#     """
+
+#     df = pd.read_csv(path_file, sep=',')[:32]
+#     image_files = df['image_id']
+#     image_labels = df['emotion']
+#     X, y = [], []
+
+#     for file, label in zip(image_files, image_labels):
+#         tmp_x = img.imread(path_data + file + '.jpg')
+#         tmp_y = np.array([1 if label == i else 0 for i in range(7)])
+#         X.append(tmp_x)
+#         y.append(tmp_y)
+
+#     X = np.array(X).astype(float)
+#     y = np.array(y).astype(float)
+    
+#     return X, y
 
 
 # class FaceDatasetOld(Dataset):

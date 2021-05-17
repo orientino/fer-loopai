@@ -1,5 +1,6 @@
-__pycache__/*
-utils/__pycache__/*
+__pycache__/
+utils/__pycache__/
+models/__pycache__/
 .vscode/*
 data/*
 description.pdf
