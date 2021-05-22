@@ -1,7 +1,10 @@
+.vscode/
 __pycache__/
 utils/__pycache__/
 models/__pycache__/
-.vscode/*
-data/*
+
+old/
+data/
 description.pdf
 todo
+notes

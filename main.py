@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 from torchvision import *
 from torch.utils.data import Dataset, DataLoader
-from PIL import Image
 from sklearn.model_selection import train_test_split
 from torchvision.transforms.transforms import RandomRotation
+from PIL import Image
 from utils.data import *
 
 plt.style.use('ggplot')
@@ -59,38 +59,38 @@ imshow(utils.make_grid(batch_X_train[:4]), title=[class_names[y] for y in batch_
 batch_X_train.shape
 # print(' '.join('%5s' % batch_y_train[j] for j in range(batch_size)))
 
-# # %%
-# psum = torch.tensor([0., 0., 0.])
-# psum_sq = torch.tensor([0., 0., 0.])
-
-# for image, _ in train_loader:
-#     psum += image.sum(axis=[0,2,3])
-#     psum_sq += (image**2).sum(axis=[0,2,3])
-
-# # mean and std
-# total_pixel = len(df_train)*48*48
-# total_mean = psum / total_pixel
-# total_std = torch.sqrt((psum_sq / total_pixel) - (total_mean ** 2))
-
-# print('mean: ' + str(total_mean))
-# print('std:  ' + str(total_std))
-
 # %%
 import torch.nn as nn
 import torch.optim as optim
-from models.dcnn import DCNN
+from models.dcnn import DCNN, DCNN1
 from models.vit import ViT
 from models.resnet import *
+from models.densenet import *
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
+# net = ResNet101(False).to(device)
+net = DCNN1().to(device)
+print(count_parameters(net))
 # net = ViT().to(device)
-net = ResNet50().to(device)
-criterion = nn.CrossEntropyLoss()
 # criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
-optimizer = optim.SGD(net.parameters(), lr=3e-3, momentum=0.9)
-scheduler = optim.lr_scheduler.StepLR(optimizer, 5, gamma=0.5)
-net(batch_X_train[0].unsqueeze(0))
+# optimizer = optim.SGD(net.parameters(), lr=1e-2, momentum=0.9)
+# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.5, patience=5, threshold=1e-3, verbose=True)
+# net(batch_X_train[0].unsqueeze(0))
+
+criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
+my_list = ['fc.weight', 'fc.bias']
+head = list(map(lambda x: x[1], list(filter(lambda kv: kv[0] in my_list, net.named_parameters()))))
+body = list(map(lambda x: x[1], list(filter(lambda kv: kv[0] not in my_list, net.named_parameters()))))
+optimizer = optim.SGD([
+                       {'params': head, 'lr': 3e-3},
+                       {'params': body},
+                      ], lr=3e-4, momentum=0.9, nesterov=True)
+# scheduler = optim.lr_scheduler.StepLR(optimizer, 5, gamma=0.5)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.5, patience=5, threshold=1e-3, verbose=True)
+
+# %%
+net(batch_X_train)
 
 # %%
 from utils.model import *
@@ -98,12 +98,8 @@ from utils.model import *
 times = 1
 total_train_loss, total_train_acc = [], []
 total_valid_loss, total_valid_acc = [], []
-epochs = 1
+epochs = 20
 for i in range(times):
-    # net = DCNN().to(device)
-    # criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
-    # optimizer = optim.SGD(net.parameters(), lr=3e-3, momentum=0.9)
-    print(count_parameters(net))
     train_loss, train_acc, valid_loss, valid_acc = train(
                                                     net, 
                                                     train_loader, 
@@ -113,24 +109,6 @@ for i in range(times):
                                                     scheduler, 
                                                     epochs, 
                                                     device,
-                                                    verbose=False
-                                                )
-                                    
-    net.unfreeze()
-
-    print(count_parameters(net))
-    criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
-    optimizer = optim.SGD(net.parameters(), lr=3e-5, momentum=0.9)
-    train_loss, train_acc, valid_loss, valid_acc = train(
-                                                    net, 
-                                                    train_loader, 
-                                                    valid_loader, 
-                                                    criterion, 
-                                                    optimizer,
-                                                    scheduler, 
-                                                    epochs, 
-                                                    device,
-                                                    verbose=False
                                                 )   
 
     total_train_loss.append(train_loss)

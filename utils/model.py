@@ -1,8 +1,11 @@
 import numpy as np
+from numpy.lib.arraysetops import isin
 import torch
 import matplotlib.pyplot as plt
+from torch import optim
+from torch.optim import lr_scheduler
 
-def train(model, train_loader, valid_loader, criterion, optimizer, scheduler, epochs, device, save_model=False, verbose=True):
+def train(model, train_loader, valid_loader, criterion, optimizer, scheduler, epochs, device, save_model=False, verbose=0):
     n_epochs = epochs
     valid_loss_min = np.Inf
     valid_loss, valid_acc = [], []
@@ -28,7 +31,7 @@ def train(model, train_loader, valid_loader, criterion, optimizer, scheduler, ep
             _, pred = torch.max(outputs, dim=1)
             correct += torch.sum(pred==label).item()
             
-            if (batch_idx) % 100 == 0 and verbose:
+            if (batch_idx) % 100 == 0 and verbose>2:
                 print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.3f}' 
                     .format(epoch, n_epochs, batch_idx, len(train_loader), loss.item()))
 
@@ -55,17 +58,18 @@ def train(model, train_loader, valid_loader, criterion, optimizer, scheduler, ep
                 
             valid_acc.append(correct / total)
             valid_loss.append(running_loss / len(valid_loader))
-            network_learned = running_loss < valid_loss_min
             print(f'Epoch [{epoch}/{n_epochs}] Valid Loss: {valid_loss[-1]:.3f}, Accuracy: {valid_acc[-1]:.3f}')
-            print('==================================')
 
-            if network_learned and save_model:
+            if running_loss < valid_loss_min and save_model:
                 valid_loss_min = running_loss
                 torch.save(model.state_dict(), f'./model_base_patch16_224_ep{epoch}_lr1e-3.pt')
                 print('Saving model...')
-        
+
         # take the scheduler step
-        scheduler.step()
+        if (isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau)):
+            scheduler.step(valid_acc[-1])
+        else:
+            scheduler.step()
 
     return train_loss, train_acc, valid_loss, valid_acc
 

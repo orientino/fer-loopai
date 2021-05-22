@@ -38,6 +38,23 @@ def get_class_weights(df_label):
     return class_weights
 
 
+def get_data_mean_std(train_loader, valid_loader, n_samples):
+    psum = torch.tensor([0., 0., 0.])
+    psum_sq = torch.tensor([0., 0., 0.])
+
+    for image, _ in train_loader:
+        psum += image.sum(axis=[0,2,3])
+        psum_sq += (image**2).sum(axis=[0,2,3])
+    for image, _ in valid_loader:
+        psum += image.sum(axis=[0,2,3])
+        psum_sq += (image**2).sum(axis=[0,2,3])
+
+    # mean and std
+    total_pixel = n_samples*48*48
+    total_mean = psum / total_pixel
+    total_std = torch.sqrt((psum_sq / total_pixel) - (total_mean ** 2))
+    return total_mean, total_std
+
 # def load_data(path_file, path_data):
 #     """
 #     Args
