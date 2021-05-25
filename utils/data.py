@@ -1,10 +1,11 @@
 import numpy as np
-import pandas as pd
-import matplotlib.image as img
+import matplotlib.pyplot as plt
 import os
 import torch
+from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import Dataset
 from PIL import Image
+from sklearn.model_selection import train_test_split
 
 
 class FaceDataset(Dataset):
@@ -26,6 +27,57 @@ class FaceDataset(Dataset):
             image = self.transform(image)
 
         return image, label
+
+
+class Fer2013Dataset(Dataset):
+    def __init__(self, data, transform=None):
+        super().__init__()
+        self.data = data.reset_index()
+        self.transform = transform
+        
+    def __len__(self):
+      return len(self.data)
+    
+    def __getitem__(self, index):
+        # image = Image.fromarray(self.data['pixels_array'][index])
+        image = self.data['pixels_array'][index]
+        label = self.data['emotion'][index]
+
+        if self.transform is not None:
+            image = self.transform(image)
+
+        return image, label
+
+
+def get_dataloaders_loopai(df, transform_train, transform_valid, batch_size):
+    df_train, df_test = train_test_split(df, test_size=0.2)
+    df_train, df_valid = train_test_split(df_train, test_size=0.25)
+    path_train = './data/images_train'
+    path_test = './data/images_test'
+
+    train_data = FaceDataset(df_train, path_train, transform=transform_train)
+    valid_data = FaceDataset(df_valid, path_train, transform=transform_valid)
+    test_data = FaceDataset(df_test, path_test, transform=transform_valid)
+    train_loader = DataLoader(train_data, batch_size, shuffle=True, num_workers=0)
+    valid_loader = DataLoader(valid_data, batch_size, shuffle=False, num_workers=0)
+    test_loader = DataLoader(test_data, batch_size, shuffle=False, num_workers=0)
+
+    return train_loader, valid_loader, test_loader
+
+
+def get_dataloaders_fer2013(df, transform_train, transform_valid, batch_size):
+    df_train = df[df['Usage']=='Training']
+    df_valid = df[df['Usage']=='PrivateTest']
+    df_test = df[df['Usage']=='PublicTest']
+
+    train_data = Fer2013Dataset(df_train, transform=transform_train)
+    valid_data = Fer2013Dataset(df_valid, transform=transform_valid)
+    test_data = Fer2013Dataset(df_test, transform=transform_valid)
+    train_loader = DataLoader(train_data, batch_size, shuffle=True, num_workers=0)
+    valid_loader = DataLoader(valid_data, batch_size, shuffle=False, num_workers=0)
+    test_loader = DataLoader(test_data, batch_size, shuffle=False, num_workers=0)
+
+    return train_loader, valid_loader, test_loader
 
 
 def get_class_weights(df_label):
@@ -55,48 +107,11 @@ def get_data_mean_std(train_loader, valid_loader, n_samples):
     total_std = torch.sqrt((psum_sq / total_pixel) - (total_mean ** 2))
     return total_mean, total_std
 
-# def load_data(path_file, path_data):
-#     """
-#     Args
-#         path_file (str)
-#         path_data (str)
 
-#     Returns
-#         [n,48,48,3], [n, 7]
-#     """
-
-#     df = pd.read_csv(path_file, sep=',')[:32]
-#     image_files = df['image_id']
-#     image_labels = df['emotion']
-#     X, y = [], []
-
-#     for file, label in zip(image_files, image_labels):
-#         tmp_x = img.imread(path_data + file + '.jpg')
-#         tmp_y = np.array([1 if label == i else 0 for i in range(7)])
-#         X.append(tmp_x)
-#         y.append(tmp_y)
-
-#     X = np.array(X).astype(float)
-#     y = np.array(y).astype(float)
-    
-#     return X, y
-
-
-# class FaceDatasetOld(Dataset):
-#     def __init__(self, data, labels, transform=None):
-#         super().__init__()
-#         self.data = data
-#         self.labels = labels
-#         self.transform = transform
-        
-#     def __len__(self):
-#         return len(self.data)
-    
-#     def __getitem__(self, index):
-#         image, label = self.data[index], self.labels[index] 
-#         image = Image.fromarray(image).convert('RGB')
-
-#         if self.transform is not None:
-#             image = self.transform(image)
-
-#         return image, label
+def imshow(img, title=None):
+    mean, std = [0.5059], [0.2547]
+    img = img * std[0] + mean[0]     # unnormalize
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.title(title)
+    plt.show()

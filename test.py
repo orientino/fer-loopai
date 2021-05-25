@@ -2,31 +2,39 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from torch.nn.functional import threshold
+from pandas.core.frame import DataFrame
 from torchvision.transforms.transforms import PILToTensor, ToTensor
 plt.style.use('ggplot')
 
-df = pd.read_csv('./data/challengeA_train.csv')
-train_count = df.groupby('emotion').count()['image_id']
-train_count.plot(kind='bar')
-
-# %%
-# compute class weights 
-# w_j = n_samples / (n_classes * n_samples_j)
-n_classes = len(df['emotion'].unique())
-class_weight = [len(df)/(n_classes*len(df[df['emotion']==i])) 
-                for i in range(n_classes)]
-class_weight
+df = pd.read_csv('data/challengeA_train_clean.csv')
+len(df)
+# train_count = df.groupby('emotion').count()['image_id']
+# train_count.plot(kind='bar')
+# len(df)
 
 # %%
 from PIL import Image
-import os
-import torch
 from torchvision import *
+import os
+import face_recognition
+import cv2 as cv
 
-thresh = 0.01
-anomalies = []
-for i in df['image_id'][:]:
+thresh = 0.15
+anomalies, anomalies_names = [], []
+# for i in df['image_id']:
+#     path = os.path.join('data/images_train', i+'.jpg')
+#     # path = os.path.join('data/images_train', '0bb37430-d2b6-4552-bb2c-5a6576724520'+'.jpg')
+#     image = face_recognition.load_image_file(path)
+#     face_locations = face_recognition.face_locations(image)
+#     # print(face_locations)
+
+#     image = Image.open(path)
+#     if (len(face_locations) == 0):
+#         anomalies.append(ToTensor()(image))
+#         anomalies_names.append(i)
+
+
+for i in df['image_id']:
     path = os.path.join('data/images_train', i+'.jpg')
     # path = os.path.join('data/images_train', '0bb37430-d2b6-4552-bb2c-5a6576724520'+'.jpg')
     image = Image.open(path)
@@ -42,9 +50,19 @@ for i in df['image_id'][:]:
 
     if (total_std < thresh):
         anomalies.append(image)
+        anomalies_names.append(i)
 
     # print('mean: ' + str(total_mean))
     # print('std:  ' + str(total_std))
+
+# %%
+# anomalies = []
+# anomalies_names = []
+# for i in df['image_id']:
+#     path = os.path.join('data/images_train', i+'.jpg')
+#     image = Image.open(path)
+#     anomalies.append(ToTensor()(image))
+#     anomalies_names.append(i)
 
 # %%
 def imshow(img, title=None):
@@ -53,10 +71,22 @@ def imshow(img, title=None):
     plt.title(title)
     plt.show()
 
-imshow(utils.make_grid(anomalies[:32]))
+imshow(utils.make_grid(anomalies[1000:1200]))
 print(len(anomalies))
-print(len(df))
-print(len(df[~df['image_id'].isin(anomalies)]))
 
 # %%
-df[~df['image_id'].isin(anomalies)]
+# m = [9, 12, 29, 35]
+
+# %%
+df = pd.read_csv('data/challengeA_train.csv', index_col=0)
+df_new = df[~df['image_id'].isin(anomalies_names)]
+df_new.to_csv('data/challengeA_train_clean.csv')
+print(len(df))
+print(len(df_new))
+
+# %%
+df = pd.read_csv('data/challengeA_train.csv', index_col=0)
+dfc = pd.read_csv('data/challengeA_train_clean.csv', index_col=0)
+
+print(len(df))
+print(len(dfc))
