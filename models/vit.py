@@ -1,4 +1,5 @@
 import timm
+import torch
 from torch import nn
 # from timm.data import resolve_data_config
 # from timm.data.transforms_factory import create_transfor
@@ -24,3 +25,7 @@ class ViT(nn.Module):
         for param in self.model.parameters():
             param.requires_grad = False
 
+vit = ViT()
+x = torch.rand([1, 1, 48, 48])
+y = vit(x)
+print(y.shape)

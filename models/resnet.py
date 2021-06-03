@@ -1,35 +1,36 @@
-# %%
+import torch
+import pickle
 from torchvision import models
 from torch import nn
 
 def ResNet50(pretrained):
-    """ResNet 23.5M parameters"""
+    """ResNet 23.5M parameters pretrained using ImageNet"""
     model = models.resnet50(pretrained=pretrained)
     model.fc = nn.Linear(2048, 7)
     model.conv1.weight = nn.Parameter(model.conv1.weight.sum(dim=1, keepdim=True))
     return model
 
-def ResNet101(pretrained):
-    """ResNet 58.1M parameters"""
-    model = models.resnet152(pretrained=pretrained)
-    model.fc = nn.Linear(2048, 7)
-    return model
 
-def ResNetCustom():
-    """ResNet 23.5M parameters"""
-    model = models.resnet50(pretrained=False)
-    model.fc = nn.Linear(2048, 7)
+def ResNet50VGGFace2():
+    """ResNet 23.5M parameters pretrained using VGGFace2"""
+    model = models.resnet50(pretrained=False, num_classes=8631)
+    load_state_dict(model, './pretrained/resnet50_ft_weight.pkl')
     model.conv1.weight = nn.Parameter(model.conv1.weight.sum(dim=1, keepdim=True))
     return model
 
-# # add a convolution to split input into 3 layers
-# x = torch.randn(1, 1, 224, 224)
-# model = models.vgg16(pretrained=False) # pretrained=False just for debug reasons
-# first_conv_layer = [nn.Conv2d(1, 3, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, bias=True)]
-# first_conv_layer.extend(list(model.features))  
-# model.features= nn.Sequential(*first_conv_layer )  
-# output = model(x)
-model = models.resnet50(pretrained=False)
-model.fc = nn.Linear(2048, 7)
-model.conv1.weight = nn.Parameter(model.conv1.weight.sum(dim=1, keepdim=True))
-model.eval()
+
+def load_state_dict(model, fname):
+    """Pretrained models from https://github.com/cydonia999/VGGFace2-pytorch"""
+    with open(fname, 'rb') as f:
+        weights = pickle.load(f, encoding='latin1')
+
+    own_state = model.state_dict()
+    for name, param in weights.items():
+        if name in own_state:
+            try:
+                own_state[name].copy_(torch.from_numpy(param))
+            except Exception:
+                raise RuntimeError('While copying the parameter named {}, whose dimensions in the model are {} and whose '\
+                                   'dimensions in the checkpoint are {}.'.format(name, own_state[name].size(), param.size()))
+        else:
+            raise KeyError('unexpected key "{}" in state_dict'.format(name))
