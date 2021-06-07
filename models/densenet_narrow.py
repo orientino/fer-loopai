@@ -271,7 +271,7 @@ def densenet121(pretrained: bool = False, progress: bool = True, **kwargs: Any) 
         memory_efficient (bool) - If True, uses checkpointing. Much more memory efficient,
           but slower. Default: *False*. See `"paper" <https://arxiv.org/pdf/1707.06990.pdf>`_.
     """
-    return _densenet('densenet121', 32, (6, 12, 24, 16), 64, pretrained, progress,
+    return _densenet('densenet121', 24, (6, 12, 24, 16), 64, pretrained, progress,
                      **kwargs)
 
 

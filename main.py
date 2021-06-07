@@ -1,7 +1,10 @@
 # %%
+from utils.evaluate import evaluate
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
+from sklearn.utils import class_weight
 from torchvision import *
 from utils.data import *
 
@@ -23,31 +26,35 @@ transform_valid = transforms.Compose([
 ])
 
 # %%
-df = pd.read_csv('./data/challengeA_train.csv', index_col=0)[:100]
+path = './data/'
+
+df = pd.read_csv(os.path.join(path, 'challengeA_train.csv'), index_col=0)[:1000]
 class_weights = torch.tensor(get_class_weights(df['emotion']))
 class_names = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
 print(f'Dataset size: {len(df)}')
 
-batch_size = 32
-train_loader, valid_loader, test_loader = get_dataloaders_loopai(df, transform_train, transform_valid, batch_size)
+batch_size = 1
+train_loader, valid_loader, test_loader = get_dataloaders_loopai(df, path, transform_train, transform_valid, batch_size)
 
 batch_X_train, batch_y_train = next(iter(train_loader))
 imshow(utils.make_grid(batch_X_train[:8]), title=[class_names[y] for y in batch_y_train[:4]])
 batch_X_train.shape
 
-# %%
-df_fer = pd.read_csv('data/fer2013.csv')
-df_fer['pixels_array'] = [np.fromstring(x, sep=' ').reshape(48, 48)/255 for x in df_fer['pixels']]
-class_weights = torch.tensor(get_class_weights(df_fer['emotion']))
-class_names = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
-print(f'Dataset size: {len(df_fer)}')
+# # %%
+# path = './data/'
 
-batch_size = 32
-train_loader, valid_loader, test_loader = get_dataloaders_fer2013(df_fer, transform_train, transform_valid, batch_size)
+# df_fer = pd.read_csv(os.path.join(path, 'fer2013.csv'))
+# df_fer['pixels_array'] = [Image.fromarray(np.fromstring(x, sep=' ').reshape(48, 48)/255) for x in df_fer['pixels']]
+# class_weights = torch.tensor(get_class_weights(df_fer['emotion']))
+# class_names = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+# print(f'Dataset size: {len(df_fer)}')
 
-batch_X_train, batch_y_train = next(iter(train_loader))
-imshow(utils.make_grid(batch_X_train[:8]))
-batch_X_train.shape
+# batch_size = 32
+# train_loader, valid_loader, test_loader = get_dataloaders_fer2013(df_fer, transform_train, transform_valid, batch_size, True)
+
+# batch_X_train, batch_y_train = next(iter(train_loader))
+# imshow(utils.make_grid(batch_X_train[:8]))
+# batch_X_train.shape
 
 # %%
 import torch.nn as nn
@@ -56,17 +63,17 @@ from models.dcnn import *
 from models.vit import *
 from models.resnet import *
 from models.densenet import *
+from models.vggnet import *
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-# net = ResNet101(False).to(device)
-net = DCNN2().to(device)
+model = VGGNet2().to(device)
 criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
-optimizer = optim.Adam(net.parameters())
+optimizer = optim.Adam(model.parameters())
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.5, patience=5, threshold=1e-3, verbose=True)
-net(batch_X_train)
+model(batch_X_train)
 
-# criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
+# criterion = nn.CrossEntroyLoss(weight=class_weights.to(device))
 # my_list = ['fc.weight', 'fc.bias']
 # head = list(map(lambda x: x[1], list(filter(lambda kv: kv[0] in my_list, net.named_parameters()))))
 # body = list(map(lambda x: x[1], list(filter(lambda kv: kv[0] not in my_list, net.named_parameters()))))
@@ -79,14 +86,33 @@ net(batch_X_train)
 
 # %%
 from utils.train import *
+from utils.evaluate import *
+from utils.plot import *
 
-repeat = 1
+# input, label = next(iter(train_loader))
+# output, output_idx = infer(model, input, label, device)
+# plot_infer(input, label, output, output_idx, class_names)
+
+# load("VGG_99.tar", model)
+# output, output_idx = infer(model, input, label, device)
+# plot_infer(input, label, output, output_idx, class_names)
+
+# image, saliency = saliency_map(input, model)
+# plot_saliency_map(image.detach(), saliency.cpu())
+
+# evaluate(model, train_loader, criterion, device)
+
+# %%
+from utils.train import *
+from utils.plot import *
+
 total_train_loss, total_train_acc = [], []
 total_valid_loss, total_valid_acc = [], []
 epochs = 10
+repeat = 1
 for i in range(repeat):
-    train_loss, train_acc, valid_loss, valid_acc = train(
-                                                    net, 
+    train_loss, train_acc, valid_loss, valid_acc = fit(
+                                                    model, 
                                                     train_loader, 
                                                     valid_loader, 
                                                     criterion, 
@@ -94,7 +120,8 @@ for i in range(repeat):
                                                     scheduler, 
                                                     epochs, 
                                                     device,
-                                                )   
+                                                    save_after=0
+                                                )
 
     total_train_loss.append(train_loss)
     total_train_acc.append(train_acc)
@@ -104,3 +131,5 @@ for i in range(repeat):
 # %%
 from utils.plot import *
 plot_loss_accuracy(total_train_loss, total_valid_loss, total_train_acc, total_valid_acc)
+
+# %%

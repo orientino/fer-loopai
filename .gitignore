@@ -5,6 +5,8 @@ models/__pycache__/
 
 old/
 data/
+pretrained/
 description.pdf
 todo
 notes
+*.tar

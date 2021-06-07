@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
 
 
 def plot_loss_accuracy(train_loss, valid_loss, train_acc, valid_acc):
@@ -73,3 +75,40 @@ def plot_accuracy(train_acc, valid_acc):
 
     print(f'Train Accuracy mean: {train_acc_mean[-1]:.3f}, std: {train_acc_std[-1]:.3f}')
     print(f'Valid Accuracy mean: {valid_acc_mean[-1]:.3f}, std: {valid_acc_std[-1]:.3f}')
+
+
+def plot_infer(input, label, output, output_idx, class_names):
+    idx = 0
+    fig = plt.figure(figsize=(20, 10))
+    fig_dims = (4, 8)
+
+    for i in range(fig_dims[0]):
+        for j in range(fig_dims[1]):
+            if (idx < len(input)):
+                plt.subplot2grid(fig_dims, (i, j))
+                plt.imshow(input[idx].squeeze())
+                plt.title(f"{class_names[label[idx]]}. {class_names[output_idx[idx]]}={output[idx]*100:.0f}%")
+                plt.axis('off')
+                idx += 1
+
+
+def plot_saliency_map(image, saliency):
+    fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
+    plt.tight_layout()
+
+    axs[0].set_title('Original Image', fontsize=18)
+    axs[0].imshow(image, cmap = 'gray')
+    axs[0].axis('off')
+
+    axs[1].set_title('Saliency Map', fontsize=18)
+    im = axs[1].imshow(saliency, cmap='coolwarm')
+    axs[1].axis('off')
+
+    axs[2].set_title('Superimposed Saliency Map', fontsize=18)
+    axs[2].imshow(image, cmap = 'gray')
+    axs[2].imshow(saliency, cmap='coolwarm', alpha=0.5)
+    axs[2].axis('off')
+
+    cbar = fig.colorbar(im, ax=axs.ravel().tolist())
+    for t in cbar.ax.get_yticklabels():
+        t.set_fontsize(12)

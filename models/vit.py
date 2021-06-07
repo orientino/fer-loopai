@@ -24,8 +24,3 @@ class ViT(nn.Module):
         # freeze all parameters 
         for param in self.model.parameters():
             param.requires_grad = False
-
-vit = ViT()
-x = torch.rand([1, 1, 48, 48])
-y = vit(x)
-print(y.shape)

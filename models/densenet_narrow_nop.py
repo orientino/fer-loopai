@@ -160,7 +160,7 @@ class DenseNet(nn.Module):
         self,
         growth_rate: int = 32,
         block_config: Tuple[int, int, int, int] = (6, 12, 24, 16),
-        num_init_features: int = 1,
+        num_init_features: int = 64,
         bn_size: int = 4,
         drop_rate: float = 0,
         num_classes: int = 1000,
@@ -171,10 +171,10 @@ class DenseNet(nn.Module):
 
         # First convolution
         self.features = nn.Sequential(OrderedDict([
-            # ('conv0', nn.Conv2d(1, num_init_features, kernel_size=3, stride=1,
-            #                     padding=1, bias=False)),
-            # ('norm0', nn.BatchNorm2d(num_init_features)),
-            # ('relu0', nn.ReLU(inplace=True)),
+            ('conv0', nn.Conv2d(1, num_init_features, kernel_size=3, stride=1,
+                                padding=1, bias=False)),
+            ('norm0', nn.BatchNorm2d(num_init_features)),
+            ('relu0', nn.ReLU(inplace=True)),
             # ('pool0', nn.MaxPool2d(kernel_size=2, stride=2)),
         ]))
 
@@ -271,7 +271,7 @@ def densenet121(pretrained: bool = False, progress: bool = True, **kwargs: Any) 
         memory_efficient (bool) - If True, uses checkpointing. Much more memory efficient,
           but slower. Default: *False*. See `"paper" <https://arxiv.org/pdf/1707.06990.pdf>`_.
     """
-    return _densenet('densenet121', 32, (6, 12, 24, 16), 64, pretrained, progress,
+    return _densenet('densenet121', 24, (6, 12, 24, 16), 64, pretrained, progress,
                      **kwargs)
 
 

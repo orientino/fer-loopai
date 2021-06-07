@@ -19,8 +19,28 @@ import os
 import face_recognition
 import cv2 as cv
 
-thresh = 0.15
-anomalies, anomalies_names = [], []
+
+# # check for duplicates
+# images, images_names = [], []
+# for i in df['image_id']:
+#     path = os.path.join('data/images_train', i+'.jpg')
+#     image = Image.open(path)
+#     image = ToTensor()(image)
+#     images.append(image)
+#     images_names.append(i)
+
+# from collections import Counter
+# c = Counter(images)
+
+# duplicates = []
+# for i,img in enumerate(c):
+#     if c[img] > 1:
+#         duplicates.append(i)
+
+# print(len(duplicates))
+
+
+# # check for images with no face
 # for i in df['image_id']:
 #     path = os.path.join('data/images_train', i+'.jpg')
 #     # path = os.path.join('data/images_train', '0bb37430-d2b6-4552-bb2c-5a6576724520'+'.jpg')
@@ -34,35 +54,29 @@ anomalies, anomalies_names = [], []
 #         anomalies_names.append(i)
 
 
-for i in df['image_id']:
-    path = os.path.join('data/images_train', i+'.jpg')
-    # path = os.path.join('data/images_train', '0bb37430-d2b6-4552-bb2c-5a6576724520'+'.jpg')
-    image = Image.open(path)
+# # check for images with low std
+# thresh = 0.15
+# anomalies, anomalies_names = [], []
 
-    # compute mean std
-    image = ToTensor()(image)
-    psum = image.sum(axis=[1, 2])
-    psum_sq = (image**2).sum(axis=[1,2])
-
-    total_pixel = 48*48
-    total_mean = psum / total_pixel
-    total_std = torch.sqrt((psum_sq / total_pixel) - (total_mean ** 2))
-
-    if (total_std < thresh):
-        anomalies.append(image)
-        anomalies_names.append(i)
-
-    # print('mean: ' + str(total_mean))
-    # print('std:  ' + str(total_std))
-
-# %%
-# anomalies = []
-# anomalies_names = []
 # for i in df['image_id']:
 #     path = os.path.join('data/images_train', i+'.jpg')
 #     image = Image.open(path)
-#     anomalies.append(ToTensor()(image))
-#     anomalies_names.append(i)
+
+#     # compute mean std
+#     image = ToTensor()(image)
+#     psum = image.sum(axis=[1, 2])
+#     psum_sq = (image**2).sum(axis=[1,2])
+
+#     total_pixel = 48*48
+#     total_mean = psum / total_pixel
+#     total_std = torch.sqrt((psum_sq / total_pixel) - (total_mean ** 2))
+
+#     if (total_std < thresh):
+#         anomalies.append(image)
+#         anomalies_names.append(i)
+
+    # print('mean: ' + str(total_mean))
+    # print('std:  ' + str(total_std))
 
 # %%
 def imshow(img, title=None):

@@ -3,10 +3,18 @@ import pickle
 from torchvision import models
 from torch import nn
 
-def ResNet50(pretrained):
+def ResNet18(pretrained=False):
+    """ResNet  parameters pretrained using ImageNet"""
+    model = models.resnet18(pretrained=pretrained, num_classes=7)
+    # model.fc = nn.Linear(512, 7)
+    model.conv1.weight = nn.Parameter(model.conv1.weight.sum(dim=1, keepdim=True))
+    return model
+
+
+def ResNet50(pretrained=False):
     """ResNet 23.5M parameters pretrained using ImageNet"""
     model = models.resnet50(pretrained=pretrained)
-    model.fc = nn.Linear(2048, 7)
+    # model.fc = nn.Linear(2048, 7)
     model.conv1.weight = nn.Parameter(model.conv1.weight.sum(dim=1, keepdim=True))
     return model
 
@@ -34,3 +42,6 @@ def load_state_dict(model, fname):
                                    'dimensions in the checkpoint are {}.'.format(name, own_state[name].size(), param.size()))
         else:
             raise KeyError('unexpected key "{}" in state_dict'.format(name))
+
+m = ResNet18()
+print(m.eval())

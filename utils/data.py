@@ -49,11 +49,11 @@ class Fer2013Dataset(Dataset):
         return image, label
 
 
-def get_dataloaders_loopai(df, transform_train, transform_valid, batch_size):
+def get_dataloaders_loopai(df, path, transform_train, transform_valid, batch_size):
     df_train, df_test = train_test_split(df, test_size=0.2)
     df_train, df_valid = train_test_split(df_train, test_size=0.25)
-    path_train = './data/images_train'
-    path_test = './data/images_test'
+    path_train = os.path.join(path, 'images_train')
+    path_test = os.path.join(path, 'images_test')
 
     train_data = FaceDataset(df_train, path_train, transform=transform_train)
     valid_data = FaceDataset(df_valid, path_train, transform=transform_valid)
@@ -62,13 +62,19 @@ def get_dataloaders_loopai(df, transform_train, transform_valid, batch_size):
     valid_loader = DataLoader(valid_data, batch_size, shuffle=False, num_workers=0)
     test_loader = DataLoader(test_data, batch_size, shuffle=False, num_workers=0)
 
+
     return train_loader, valid_loader, test_loader
 
 
-def get_dataloaders_fer2013(df, transform_train, transform_valid, batch_size):
+def get_dataloaders_fer2013(df, transform_train, transform_valid, batch_size, test=False):
     df_train = df[df['Usage']=='Training']
     df_valid = df[df['Usage']=='PrivateTest']
     df_test = df[df['Usage']=='PublicTest']
+
+    if test:
+        df_train = df[df['Usage']=='Training'][:100]
+        df_valid = df[df['Usage']=='PrivateTest'][:20]
+        df_test = df[df['Usage']=='PublicTest'][:20]
 
     train_data = Fer2013Dataset(df_train, transform=transform_train)
     valid_data = Fer2013Dataset(df_valid, transform=transform_valid)
