@@ -1,3 +1,8 @@
+"""
+This module contains classes and functions to handle the processing 
+of the data for the training of the model.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -5,7 +10,6 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import Dataset
 from PIL import Image
-from sklearn.model_selection import train_test_split
 
 
 class FaceDataset(Dataset):
@@ -39,7 +43,6 @@ class Fer2013Dataset(Dataset):
       return len(self.data)
     
     def __getitem__(self, index):
-        # image = Image.fromarray(self.data['pixels_array'][index])
         image = self.data['pixels_array'][index]
         label = self.data['emotion'][index]
 
@@ -49,9 +52,7 @@ class Fer2013Dataset(Dataset):
         return image, label
 
 
-def get_dataloaders_loopai(df, path, transform_train, transform_valid, batch_size):
-    df_train, df_test = train_test_split(df, test_size=0.2)
-    df_train, df_valid = train_test_split(df_train, test_size=0.25)
+def get_dataloaders_loopai(df_train, df_valid, df_test, path, transform_train, transform_valid, batch_size):
     path_train = os.path.join(path, 'images_train')
     path_test = os.path.join(path, 'images_test')
 
@@ -61,7 +62,6 @@ def get_dataloaders_loopai(df, path, transform_train, transform_valid, batch_siz
     train_loader = DataLoader(train_data, batch_size, shuffle=True, num_workers=0)
     valid_loader = DataLoader(valid_data, batch_size, shuffle=False, num_workers=0)
     test_loader = DataLoader(test_data, batch_size, shuffle=False, num_workers=0)
-
 
     return train_loader, valid_loader, test_loader
 
@@ -87,9 +87,13 @@ def get_dataloaders_fer2013(df, transform_train, transform_valid, batch_size, te
 
 
 def get_class_weights(df_label):
-    # gives more weight to minority classes
-    # the weight for a class is computed as:
-    #     w_j = n_samples / (n_classes * n_samples_j)
+    """
+        Gives more weight to minority classes.
+        The weight for a class is computed as:
+            w_j = n_samples / (n_classes * n_samples_j)
+        
+        The result will be used as an argument in the loss function.
+    """
     n_classes = len(df_label.unique())
     class_weights = [len(df_label)/(n_classes*len(df_label[df_label==i])) 
                     for i in range(n_classes)]
@@ -97,6 +101,10 @@ def get_class_weights(df_label):
 
 
 def get_data_mean_std(train_loader, valid_loader, n_samples):
+    """
+        Compute the mean and std for a dataset.
+        Used to normalize the dataset.
+    """
     psum = torch.tensor([0., 0., 0.])
     psum_sq = torch.tensor([0., 0., 0.])
 

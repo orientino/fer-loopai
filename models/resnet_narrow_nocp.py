@@ -1,3 +1,11 @@
+"""
+Modified version of ResNet, we remove the initial convolutional-pooling layer,
+reduce the feature maps on the last block from 512 to 256 and add a dropout layer
+after each ResBlock and the final pooling layer.
+
+original resnet: https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -165,9 +173,9 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 256, layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2])
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc1 = nn.Linear(256 * block.expansion, 1024)
-        self.fc2 = nn.Linear(1024, num_classes)
-        self.drop = nn.Dropout(0.5)
+        self.fc1 = nn.Linear(256 * block.expansion, 7)
+        # self.fc2 = nn.Linear(1024, num_classes)
+        self.drop = nn.Dropout(0.2)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -225,8 +233,7 @@ class ResNet(nn.Module):
 
         x = self.drop(self.avgpool(x))
         x = torch.flatten(x, 1)
-        x = F.relu(self.drop(self.fc1(x)))
-        x = self.fc2(x)
+        x = self.fc1(x)
 
         return x
 
@@ -267,12 +274,3 @@ def resnet34(pretrained: bool = False, progress: bool = True, **kwargs: Any) -> 
     """
     return _resnet('resnet34', BasicBlock, [3, 4, 6, 3], pretrained, progress,
                    **kwargs)
-
-
-def count_parameters(model):
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
-
-m = resnet18(num_classes=7)
-print(count_parameters(m))
-x = torch.rand([1, 1, 48, 48])
-y = m(x)

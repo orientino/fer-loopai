@@ -1,3 +1,10 @@
+"""
+Modified version of DenseNet, we remove the initial pooling layer, 
+use the parameter drop_rate set at 0.2 and add a dropout to the final pooling layer.
+
+original densenet: https://github.com/pytorch/vision/blob/master/torchvision/models/densenet.py
+"""
+
 import re
 import torch
 import torch.nn as nn
@@ -8,16 +15,6 @@ import torch.utils.checkpoint as cp
 from collections import OrderedDict
 from torch import Tensor
 from typing import Any, List, Tuple
-
-
-__all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201', 'densenet161']
-
-model_urls = {
-    'densenet121': 'https://download.pytorch.org/models/densenet121-a639ec97.pth',
-    'densenet169': 'https://download.pytorch.org/models/densenet169-b2777c0a.pth',
-    'densenet201': 'https://download.pytorch.org/models/densenet201-c1103571.pth',
-    'densenet161': 'https://download.pytorch.org/models/densenet161-8d451a50.pth',
-}
 
 
 class _DenseLayer(nn.Module):
@@ -227,24 +224,6 @@ class DenseNet(nn.Module):
         return out
 
 
-# def _load_state_dict(model: nn.Module, model_url: str, progress: bool) -> None:
-#     # '.'s are no longer allowed in module names, but previous _DenseLayer
-#     # has keys 'norm.1', 'relu.1', 'conv.1', 'norm.2', 'relu.2', 'conv.2'.
-#     # They are also in the checkpoints in model_urls. This pattern is used
-#     # to find such keys.
-#     pattern = re.compile(
-#         r'^(.*denselayer\d+\.(?:norm|relu|conv))\.((?:[12])\.(?:weight|bias|running_mean|running_var))$')
-
-#     state_dict = load_state_dict_from_url(model_url, progress=progress)
-#     for key in list(state_dict.keys()):
-#         res = pattern.match(key)
-#         if res:
-#             new_key = res.group(1) + res.group(2)
-#             state_dict[new_key] = state_dict[key]
-#             del state_dict[key]
-#     model.load_state_dict(state_dict)
-
-
 def _densenet(
     arch: str,
     growth_rate: int,
@@ -318,8 +297,3 @@ def densenet201(pretrained: bool = False, progress: bool = True, **kwargs: Any) 
     """
     return _densenet('densenet201', 32, (6, 12, 48, 32), 64, pretrained, progress,
                      **kwargs)
-
-m = densenet121(pretrained=True, num_classes=7)
-x = torch.rand([1,1,48,48])
-y = m(x)
-print(y)

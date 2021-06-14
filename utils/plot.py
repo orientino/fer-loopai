@@ -1,3 +1,7 @@
+"""
+Plotting functions utilities.
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -80,35 +84,76 @@ def plot_accuracy(train_acc, valid_acc):
 def plot_infer(input, label, output, output_idx, class_names):
     idx = 0
     fig = plt.figure(figsize=(20, 10))
+    fig.subplots_adjust(wspace=0.05, hspace=0.05)
     fig_dims = (4, 8)
-
+    plt.rc('font', size=7)
+    plt.rc('axes', grid=False)
+ 
     for i in range(fig_dims[0]):
         for j in range(fig_dims[1]):
             if (idx < len(input)):
                 plt.subplot2grid(fig_dims, (i, j))
-                plt.imshow(input[idx].squeeze())
-                plt.title(f"{class_names[label[idx]]}. {class_names[output_idx[idx]]}={output[idx]*100:.0f}%")
+                plt.imshow(input[idx].squeeze(), cmap='gray')
+                plt.title(f"{class_names[label[idx]]}")
+                # plt.title(f"{class_names[label[idx]]}\n{class_names[output_idx[idx]]} {output[idx]*100:.0f}%")
                 plt.axis('off')
                 idx += 1
 
 
-def plot_saliency_map(image, saliency):
+def plot_saliency_map(input, model):
+    # compute saliency map
+    image = torch.squeeze(input)
+
+    input = input.unsqueeze(0)
+    input.requires_grad_()
+    output = model(input)
+    output_max = output[0, output[0].argmax()]
+    output_max.backward()
+
+    saliency = torch.max(input.grad.data.abs(), dim=1)[0][0]
+    saliency -= saliency.min(1, keepdim=True)[0]
+    saliency /= saliency.max(1, keepdim=True)[0]
+
+    image = image.detach()
+    saliency = saliency.cpu()
+
+    # plot saliency map
     fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(15,5))
     plt.tight_layout()
-
+    plt.rc('font', size=7)
+    plt.rc('axes', grid=False)
+ 
     axs[0].set_title('Original Image', fontsize=18)
     axs[0].imshow(image, cmap = 'gray')
     axs[0].axis('off')
 
     axs[1].set_title('Saliency Map', fontsize=18)
-    im = axs[1].imshow(saliency, cmap='coolwarm')
+    im = axs[1].imshow(saliency, cmap='Reds')
     axs[1].axis('off')
 
     axs[2].set_title('Superimposed Saliency Map', fontsize=18)
     axs[2].imshow(image, cmap = 'gray')
-    axs[2].imshow(saliency, cmap='coolwarm', alpha=0.5)
+    axs[2].imshow(saliency, cmap='Reds', alpha=0.5)
     axs[2].axis('off')
 
     cbar = fig.colorbar(im, ax=axs.ravel().tolist())
     for t in cbar.ax.get_yticklabels():
         t.set_fontsize(12)
+
+
+def plot_data(input, label, class_names):
+    idx = 0
+    fig = plt.figure(figsize=(15, 5))
+    fig.subplots_adjust(wspace=0.05, hspace=0.05)
+    fig_dims = (1, 7)
+    plt.rc('font', size=7)
+    plt.rc('axes', grid=False)
+ 
+    for i in range(fig_dims[0]):
+        for j in range(fig_dims[1]):
+            if (idx < len(input)):
+                plt.subplot2grid(fig_dims, (i, j))
+                plt.imshow(input[idx].squeeze(), cmap='gray')
+                plt.title(f"{class_names[label[idx]]}")
+                plt.axis('off')
+                idx += 1

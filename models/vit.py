@@ -1,8 +1,6 @@
 import timm
 import torch
 from torch import nn
-# from timm.data import resolve_data_config
-# from timm.data.transforms_factory import create_transfor
 
 class ViT(nn.Module): 
     def __init__(self):

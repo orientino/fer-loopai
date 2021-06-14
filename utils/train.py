@@ -19,7 +19,7 @@ def fit(model, train_loader, valid_loader, criterion, optimizer, scheduler, epoc
 
         print(f'Epoch {epoch} ================================')
         print(f'Train Loss: {train_loss[-1]:.3f}, Accuracy: {train_acc[-1]:.3f}')
-        print(f'Test Loss: {valid_loss[-1]:.3f}, Accuracy: {valid_acc[-1]:.3f}, Time Epoch: {end-start}')
+        print(f'Valid Loss: {valid_loss[-1]:.3f}, Accuracy: {valid_acc[-1]:.3f}, Time Epoch: {end-start}')
 
         # scheduler step
         if (isinstance(scheduler, optim.lr_scheduler.ReduceLROnPlateau)):
@@ -42,7 +42,7 @@ def train(model, train_loader, criterion, optimizer, device, train_acc, train_lo
     correct, total = 0, 0
     model.train()
 
-    for _, (input, label) in enumerate(train_loader):
+    for input, label in train_loader:
         input, label = input.to(device), label.to(device)
         optimizer.zero_grad()
         outputs = model(input)
@@ -65,7 +65,7 @@ def valid(model, valid_loader, criterion, device, valid_acc, valid_loss):
     model.eval()
 
     with torch.no_grad():
-        for input, label in (valid_loader):
+        for input, label in valid_loader:
             input, label = input.to(device), label.to(device)
             outputs = model(input)
             loss = criterion(outputs, label)
@@ -77,20 +77,3 @@ def valid(model, valid_loader, criterion, device, valid_acc, valid_loss):
             
         valid_acc.append(correct / total)
         valid_loss.append(running_loss / len(valid_loader))
-
-
-def infer(model, input, label, device):
-    "Outputs the most likely emotion in probability"
-    correct, total = 0, 0
-    model.eval()
-
-    with torch.no_grad():
-        input, label = input.to(device), label.to(device)
-        outputs = model(input)
-
-        total += label.size(0)
-        pred, pred_idx = torch.max(F.softmax(outputs), dim=1)
-        correct += torch.sum(pred==label).item()
-        print(f"Accuracy: {correct / total}")
-
-        return pred, pred_idx
