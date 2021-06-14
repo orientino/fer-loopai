@@ -27,11 +27,11 @@ class_names = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral'
 train_loader, valid_loader, test_loader = get_dataloaders_loopai(df_train, df_valid, df_test, path, transform_valid, transform_valid, batch_size)
 
 import torch.nn as nn
-from models.dcnn import *
 from models.vit import *
 from models.densenet import *
 from models.vggnet import *
 from models.resnet_narrow_nocp import *
+from efficientnet_pytorch import EfficientNet
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 ensemble_models = []
